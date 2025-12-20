@@ -1,0 +1,7 @@
+{
+  "services": {
+    "create_access_code": { "service": "mdi:lock-open-plus" },
+    "delete_access_code": { "service": "mdi:lock-open-remove" },
+    "modify_access_code": { "service": "mdi:lock-open" }
+  }
+}

@@ -1,0 +1,90 @@
+modify_access_code:
+  name: Modify Access Code
+  description: Modify an access code
+  fields:
+    access_code_id:
+      required: true
+      name: Access Code ID
+      selector:
+        text:
+    code:
+      name: Access Code
+      description:  The 4 to 8 digit access code you wish to set
+      example:  764521
+      selector:
+        number:
+          min: 0
+          max: 99999999
+          mode: box
+          step: any
+    name:
+      name: Name of Access Code
+      description: Name to apply to this access code for reference
+      example: Guest Code
+      required:
+      selector:
+        text:
+    times:
+      name: Access Interval
+      fields:
+        start_time:
+          name: Start Time
+          description: The date/time the code will BECOME valid
+          selector:
+            datetime:
+        stop_time:
+          name: Stop Time
+          description: The date/time the code will no longer be valid
+          selector:
+            datetime:
+delete_access_code:
+  name: "Delete Access Code"
+  target:
+    entity:
+      integration: august_access
+      domain: sensor
+  fields:
+    access_code_id:
+      required: true
+      name: Access Code ID
+      selector:
+        text:
+create_access_code:
+  name: Create Access Code
+  description: Add a managed access code to an August lock
+  target:
+    entity:
+      integration: august
+      domain: lock
+  fields:
+    code:
+      name: Access Code
+      description:  The 4 to 8 digit access code you wish to set
+      example:  764521
+      required: true
+      selector:
+        number:
+          min: 0
+          max: 99999999
+          mode: box
+          step: any
+    name:
+      name: Name of Access Code
+      description: Name to apply to this access code for reference
+      example: Guest Code
+      required: true
+      selector:
+        text:
+    times:
+      name: Access Interval
+      fields:
+        start_time:
+          name: Start Time
+          description: The date/time the code will BECOME valid
+          selector:
+            datetime:
+        stop_time:
+          name: Stop Time
+          description: The date/time the code will no longer be valid
+          selector:
+            datetime:
