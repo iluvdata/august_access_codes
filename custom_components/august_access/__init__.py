@@ -8,7 +8,12 @@ from seam.exceptions import SeamHttpApiError
 from seam.routes.models import AccessCode
 
 from homeassistant.config_entries import ConfigEntry, ConfigEntryState
-from homeassistant.const import ATTR_DEVICE_ID, ATTR_ENTITY_ID, Platform
+from homeassistant.const import (
+    ATTR_CONFIG_ENTRY_ID,
+    ATTR_DEVICE_ID,
+    ATTR_ENTITY_ID,
+    Platform,
+)
 from homeassistant.core import (
     HomeAssistant,
     ServiceCall,
@@ -28,6 +33,7 @@ from .const import (
     MODIFY_SERVICE_SCHEMA,
     AugustEntityFeature,
 )
+from .util import get_august_id
 
 type AugustAccessConfigEntry = ConfigEntry[SeamAPI]
 
@@ -58,7 +64,10 @@ async def async_setup(hass: HomeAssistant, config_type: ConfigType) -> bool:
                 entry = hass.config_entries.async_get_known_entry(entry_id)
                 if entry.domain == DOMAIN:
                     break
-
+        elif ATTR_CONFIG_ENTRY_ID in call.data:
+            entry = hass.config_entries.async_get_known_entry(
+                call.data[ATTR_CONFIG_ENTRY_ID]
+            )
         if not entry:
             raise ServiceValidationError("entry_not_found")
         if entry.state is not ConfigEntryState.LOADED:
@@ -69,15 +78,21 @@ async def async_setup(hass: HomeAssistant, config_type: ConfigType) -> bool:
         """Create access code service."""
         # we need the device id
         _LOGGER.debug("Create access code with: %s", call.data)
-        if not (entity_id := call.data.get(ATTR_ENTITY_ID)):
-            raise ServiceValidationError(translation_key="entity_not_provided")
-        ent_reg: er.EntityRegistry = er.async_get(hass)
-        if not (reg_ent := ent_reg.async_get(entity_id)):
-            raise ServiceValidationError(translation_key="entity_not_found")
-        if not (august_device_id := reg_ent.device_id):
+        if not (device_id := call.data.get(ATTR_DEVICE_ID)):
+            if entity_id := call.data.get(ATTR_ENTITY_ID):
+                ent_reg: er.EntityRegistry = er.async_get(hass)
+                if not (reg_ent := ent_reg.async_get(entity_id)):
+                    raise ServiceValidationError(translation_key="entity_not_found")
+                device_id = reg_ent.device_id
+            else:
+                raise ServiceValidationError("entity_id_missing")
+        if not device_id:
+            raise ServiceValidationError(translation_key="device_id_missing")
+        august_id = get_august_id(hass, device_id)
+        if not august_id:
             raise ServiceValidationError(translation_key="device_not_found")
         august_access = _get_api(call)
-        if not (seam_id := august_access.get_seam_device_id(august_device_id)):
+        if not (seam_id := august_access.get_seam_device_id(august_id)):
             raise ServiceValidationError("seam_device_not_found")
         # Replace with the correct method to create an access code, for example:
         access_code: AccessCode = await august_access.async_create_access_code(
@@ -85,7 +100,7 @@ async def async_setup(hass: HomeAssistant, config_type: ConfigType) -> bool:
             name=call.data["name"],
             code=call.data["code"],
             start_time=call.data.get("start_time"),
-            end_time=call.data.get("end_time"),
+            end_time=call.data.get("stop_time"),
         )
         return asdict(access_code)
 
@@ -102,14 +117,13 @@ async def async_setup(hass: HomeAssistant, config_type: ConfigType) -> bool:
         _LOGGER.debug("Got data: %s", call.data)
         if not (access_code_id := call.data.get("access_code_id")):
             raise ServiceValidationError("access_code_id_missing")
-        # Replace with the correct method to create an access code, for example:
         august_access = _get_api(call)
         await august_access.async_modify_access_code(
             access_code_id,
             name=call.data.get("name"),
             code=call.data.get("code"),
             start_time=call.data.get("start_time"),
-            end_time=call.data.get("end_time"),
+            end_time=call.data.get("stop_time"),
         )
 
     hass.services.async_register(

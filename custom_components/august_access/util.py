@@ -29,8 +29,22 @@ def get_august_lock_devices(hass: HomeAssistant) -> list[dr.DeviceEntry]:
     return devices
 
 
+def get_august_device(hass: HomeAssistant, device_id: str) -> dr.DeviceEntry | None:
+    """Get an August lock by hass device id."""
+    device_registry: dr.DeviceRegistry = dr.async_get(hass)
+    return device_registry.async_get(device_id)
+
+
+def get_august_id(hass: HomeAssistant, device_id: str) -> str | None:
+    """Get the August device ID from a device ID."""
+    device = get_august_device(hass, device_id)
+    if not device:
+        return None
+    return get_august_device_id(device)
+
+
 def get_august_device_id(device: dr.DeviceEntry) -> str:
-    """Get the august device id from a Device Regisry Entry."""
+    """Get the august device id (not hass) from a Device Registry Entry."""
 
     return list(device.identifiers)[0][1]
 

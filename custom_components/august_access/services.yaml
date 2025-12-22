@@ -1,7 +1,13 @@
 modify_access_code:
   name: Modify Access Code
-  description: Modify an access code
+  description: Modify a managed access code
   fields:
+    config_entry_id:
+      required: true
+      name: August Access Configuration
+      selector:
+        config_entry:
+          integration: august_access
     access_code_id:
       required: true
       name: Access Code ID
@@ -38,12 +44,15 @@ modify_access_code:
           selector:
             datetime:
 delete_access_code:
-  name: "Delete Access Code"
-  target:
-    entity:
-      integration: august_access
-      domain: sensor
+  name: Delete Access Code
+  description: Remove a managed access code from an August lock
   fields:
+    config_entry_id:
+      required: true
+      name: August Access Configuration
+      selector:
+        config_entry:
+          integration: august_access
     access_code_id:
       required: true
       name: Access Code ID
@@ -54,8 +63,8 @@ create_access_code:
   description: Add a managed access code to an August lock
   target:
     entity:
-      integration: august
-      domain: lock
+      integration: august_access
+      domain: sensor
   fields:
     code:
       name: Access Code

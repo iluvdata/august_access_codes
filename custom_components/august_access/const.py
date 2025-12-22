@@ -6,7 +6,12 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.const import ATTR_DEVICE_ID, ATTR_ENTITY_ID, CONF_API_KEY
+from homeassistant.const import (
+    ATTR_CONFIG_ENTRY_ID,
+    ATTR_DEVICE_ID,
+    ATTR_ENTITY_ID,
+    CONF_API_KEY,
+)
 import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.selector import TextSelector
 
@@ -42,13 +47,13 @@ class ACCESS_CODE_STATUS(StrEnum):
 
 def _verify_datetimes(data: dict[str, Any]) -> dict[str, Any]:
     start = data.get("start_time")
-    end = data.get("end_time")
+    end = data.get("stop_time")
     if (start is not None and end is None) or (end is not None and start is None):
         raise vol.Invalid("If specifying times both entries are required.")
     if start is not None:
-        if data["end_time"] < datetime.now():
+        if data["stop_time"] < datetime.now():
             raise vol.Invalid("End time must be in the future.")
-        if data["start_time"] > data["end_time"]:
+        if data["start_time"] > data["stop_time"]:
             raise vol.Invalid("Start time must be before end time.")
     return data
 
@@ -72,15 +77,13 @@ MODIFY_SERVICE_SCHEMA = vol.Schema(
     vol.All(
         {
             vol.Required("access_code_id"): cv.string,
-            vol.Optional(ATTR_ENTITY_ID): cv.ensure_list,
-            vol.Optional(ATTR_DEVICE_ID): cv.ensure_list,
+            vol.Required(ATTR_CONFIG_ENTRY_ID): cv.string,
             vol.Optional("name"): cv.string,
-            vol.Optional("code"): vol.All(int, vol.Range(4, 8)),
+            vol.Optional("code"): vol.All(int, vol.Range(0, 99999999)),
             vol.Optional("start_time"): cv.datetime,
-            vol.Optional("end_time"): cv.datetime,
+            vol.Optional("stop_time"): cv.datetime,
         },
         _verify_datetimes,
-        _verify_target,
     )
 )
 
@@ -90,9 +93,9 @@ CREATE_SERVICE_SCHEMA = vol.Schema(
             vol.Optional(ATTR_ENTITY_ID): cv.ensure_list,
             vol.Optional(ATTR_DEVICE_ID): cv.ensure_list,
             vol.Required("name"): cv.string,
-            vol.Required("code"): vol.All(int, vol.Range(4, 8)),
+            vol.Required("code"): vol.All(int, vol.Range(0, 99999999)),
             vol.Optional("start_time"): cv.datetime,
-            vol.Optional("end_time"): cv.datetime,
+            vol.Optional("stop_time"): cv.datetime,
         },
         _verify_datetimes,
         _verify_target,
@@ -103,10 +106,8 @@ DELETE_SERVICE_SCHEMA = vol.Schema(
     vol.All(
         {
             vol.Required("access_code_id"): cv.string,
-            vol.Optional(ATTR_ENTITY_ID): cv.ensure_list,
-            vol.Optional(ATTR_DEVICE_ID): cv.ensure_list,
-        },
-        _verify_target,
+            vol.Required(ATTR_CONFIG_ENTRY_ID): cv.string,
+        }
     )
 )
 

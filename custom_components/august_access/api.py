@@ -29,6 +29,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_API_KEY
 from homeassistant.core import CALLBACK_TYPE, HomeAssistant
 from homeassistant.exceptions import ConfigEntryError, IntegrationError
+from homeassistant.util.dt import as_utc
 
 from .const import (
     AUGUST_DOMAIN,
@@ -97,15 +98,34 @@ class SeamAPI:
         url: str = async_generate_url(hass, webhook_id)
         _LOGGER.debug("Creating seam webhook with URL: %s", url)
 
-        # Create remote webhook
-        # self._webhook = await hass.async_add_executor_job(
-        #    partial(
-        #        self._seam.webhooks.create,
-        #        url=url,
-        #        event_types=list(EventType),
-        #    ),
-        # )
-        # _LOGGER.debug("Create Seam webhook with id: %s", self._webhook.webhook_id)
+        # Get or Create remote webhook
+        webhooks: list[Webhook] = await hass.async_add_executor_job(
+            self._seam.webhooks.list
+        )
+        if len(webhooks) > 0:
+            self._webhook = webhooks[0]
+            _LOGGER.debug(
+                "Reusing existing Seam webhook with id: %s", self._webhook.webhook_id
+            )
+            if len(webhooks) > 1:
+                _LOGGER.warning(
+                    "More than one Seam webhook exists. Removing extra webhooks"
+                )
+                for webhook in webhooks[1:]:
+                    await self._hass.async_add_executor_job(
+                        partial(
+                            self._seam.webhooks.delete, webhook_id=webhook.webhook_id
+                        )
+                    )
+        else:
+            self._webhook = await hass.async_add_executor_job(
+                partial(
+                    self._seam.webhooks.create,
+                    url=url,
+                    event_types=[event.value for event in EventType],
+                ),
+            )
+            _LOGGER.debug("Create Seam webhook with id: %s", self._webhook.webhook_id)
 
         return self
 
@@ -133,6 +153,10 @@ class SeamAPI:
         end_time: datetime | None = None,
     ) -> AccessCode:
         """Create an access code."""
+        if start_time:
+            start_time = as_utc(start_time)
+        if end_time:
+            end_time = as_utc(end_time)
         return await self._hass.async_add_executor_job(
             partial(
                 self._seam.access_codes.create,
@@ -154,6 +178,10 @@ class SeamAPI:
         end_time: datetime | None,
     ) -> None:
         """Modify an access code."""
+        if start_time:
+            start_time = as_utc(start_time)
+        if end_time:
+            end_time = as_utc(end_time)
         await self._hass.async_add_executor_job(
             partial(
                 self._seam.access_codes.update,
@@ -170,7 +198,7 @@ class SeamAPI:
             access_code: AccessCode = await self._hass.async_add_executor_job(
                 partial(self._seam.access_codes.get, access_code_id=acccess_code_id)
             )
-            if access_code.is_managed:
+            if not access_code.is_managed:
                 raise AugustAccessError("Unable to manipulate unmanaged codes")
         except SeamHttpApiError as ex:
             raise AugustAccessError(str(ex)) from ex
