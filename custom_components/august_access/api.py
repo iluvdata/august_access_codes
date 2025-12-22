@@ -105,7 +105,9 @@ class SeamAPI:
         if len(webhooks) > 0:
             self._webhook = webhooks[0]
             _LOGGER.debug(
-                "Reusing existing Seam webhook with id: %s", self._webhook.webhook_id
+                "Reusing existing Seam webhook with id: %s and secret: %s",
+                self._webhook.webhook_id,
+                self._webhook.secret,
             )
             if len(webhooks) > 1:
                 _LOGGER.warning(
@@ -276,10 +278,17 @@ class SeamAPI:
         # unregister webhook
         async_unregister(self._hass, f"{DOMAIN}_{self._entry.unique_id}")
         if hasattr(self, "_webhook"):
-            await self._hass.async_add_executor_job(
-                partial(self._seam.webhooks.delete, webhook_id=self._webhook.webhook_id)
-            )
-            _LOGGER.debug("Deleted seam webhook with ID: %s", self._webhook.webhook_id)
+            try:
+                await self._hass.async_add_executor_job(
+                    partial(
+                        self._seam.webhooks.delete, webhook_id=self._webhook.webhook_id
+                    )
+                )
+                _LOGGER.debug(
+                    "Deleted seam webhook with ID: %s", self._webhook.webhook_id
+                )
+            except SeamHttpApiError as ex:
+                _LOGGER.warning("Failed to delete Seam webhook: %s", ex)
         return True
 
     def add_listener_handler(self, event_handler: EventHandler) -> Callable:
