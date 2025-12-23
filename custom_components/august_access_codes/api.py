@@ -322,6 +322,14 @@ class SeamAPI:
                     # reload config entry to update devices
                     await hass.config_entries.async_reload(self._entry.entry_id)
                     return Response(status=200)
+                if event.event_type == EventType.ACCESS_CODE_DELETED_EXTERNAL_TO_SEAM:
+                    # Remove the access code from seam
+                    await hass.async_add_executor_job(
+                        partial(
+                            self._seam.access_codes.delete,
+                            access_code_id=event.access_code_id,
+                        )
+                    )
                 handlers = [
                     handler.handler
                     for handler in self._webhook_listeners
