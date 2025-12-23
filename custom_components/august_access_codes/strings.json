@@ -9,7 +9,7 @@
     "step": {
       "user": {
         "title": "Seam Configuration",
-        "description": "To use the August Access integration, you must have an August account and an API key from Seam. You can obtain an API key by signing up at [{ url }]({ url }). Once you have your API key, enter it below to configure the integration.\n\nSee the documentation for more details [August Access Integration Configuration](TBD)",
+        "description": "To use the August Access integration, you must have an August account and an API key from Seam. You can obtain an API key by signing up at [{url}]({url}). Once you have your API key, enter it below to configure the integration.\n\nSee the documentation for more details [August Access Codes Integration Configuration](TBD)",
         "data": {
           "api_key": "Seam API Key"
         }
