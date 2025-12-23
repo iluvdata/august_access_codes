@@ -21,6 +21,7 @@ from homeassistant.core import (
     SupportsResponse,
 )
 from homeassistant.exceptions import ServiceValidationError
+from homeassistant.helpers import config_validation as cv
 import homeassistant.helpers.device_registry as dr
 import homeassistant.helpers.entity_registry as er
 from homeassistant.helpers.typing import ConfigType
@@ -38,6 +39,9 @@ from .util import get_august_id
 type AugustAccessConfigEntry = ConfigEntry[SeamAPI]
 
 _LOGGER = logging.getLogger(__name__)
+
+
+CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
 
 async def async_setup(hass: HomeAssistant, config_type: ConfigType) -> bool:
