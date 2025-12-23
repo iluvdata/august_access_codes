@@ -27,7 +27,6 @@ modify_access_code:
       name: Name of Access Code
       description: Name to apply to this access code for reference
       example: Guest Code
-      required:
       selector:
         text:
     times:

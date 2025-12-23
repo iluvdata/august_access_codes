@@ -1,16 +1,13 @@
 {
   "domain": "august_access_codes",
-  "name": "August Access Codes",
   "codeowners": ["@iluvdata"],
   "config_flow": true,
   "dependencies": ["webhook", "august"],
   "documentation": "https://github.com/iluvdata/august_access_codes",
-  "homekit": {},
   "integration_type": "service",
   "iot_class": "cloud_push",
   "issue_tracker": "https://github.com/iluvdata/august_access_codes/issues",
+  "name": "August Access Codes",
   "requirements": ["seam==1.139.0"],
-  "ssdp": [],
-  "zeroconf": [],
   "version": "2025.12.1"
 }
