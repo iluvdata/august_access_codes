@@ -6,6 +6,7 @@ from typing import Any
 
 import voluptuous as vol
 
+from homeassistant.components.august import DOMAIN as AUGUST_DOMAIN
 from homeassistant.const import (
     ATTR_CONFIG_ENTRY_ID,
     ATTR_DEVICE_ID,
@@ -15,8 +16,7 @@ from homeassistant.const import (
 import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.selector import TextSelector
 
-DOMAIN = "august_access"
-AUGUST_DOMAIN = "august"
+DOMAIN = "august_access_codes"
 
 SEAM_URL = "https://console.seam.co/"
 AUGUST_LOCK_TYPE = "august_lock"
@@ -248,3 +248,6 @@ class AugustEntityFeature(IntFlag):
 
     ACCESS_CODES = 1
     PROGRAM_CODES = 2
+
+
+__all__ = ["AUGUST_DOMAIN"]
