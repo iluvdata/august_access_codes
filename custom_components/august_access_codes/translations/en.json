@@ -1,8 +1,5 @@
 {
   "config": {
-    "initiate_flow": {
-      "user": "Add Seam Workspace"
-    },
     "abort": {
       "already_configured": "Seam workspace is already configured",
       "august_integration_missing": "The August integration must be set up before configuring the August Access Helper Integration.",
