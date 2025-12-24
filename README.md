@@ -114,7 +114,7 @@ The sensor attributes will contain two `json` keyed lists:
 | Parameter | Required | Description/Notes |
 |-----------|----------|-------------------|
 | `config_entry_id` | **required** | ID of the config entry of the Seam API where the managed access code exists |
-| `access_code_id` | **required** | The ID assigned to the access code by Seam.  This can be found in the [sensor attributes](TODO) for the lock
+| `access_code_id` | **required** | The ID assigned to the access code by Seam.  This can be found in the [sensor attributes](#attributes) for the lock
 
 ## Support
 If you encounter any issues or have feature requests, please open an issue on the [GitHub Issues page](https://github.com/iluvdata/liebherr/issues).
