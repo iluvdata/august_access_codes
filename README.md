@@ -47,8 +47,8 @@ A secure and publically available Home Assistant either by your own means or via
    3. Search for "August Access Codes" and select it.
 3. Enter your Seam API key and the setup process will complete.
 
-> [!NOTE] Notes
-> In order for this to work please ensure:
+> [!NOTE] 
+> In order for this integration to work please ensure:
 >
 > 1. The base August Access Integration is already configured.
 > 2. The devices can be seen in the Seam Console > Devices.
