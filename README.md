@@ -88,7 +88,7 @@ The sensor attributes will contain two `json` keyed lists:
 | `start_time` | optional | Date/Time code becomes valid (local time zone) |
 | `stop_time` | optional |  Date/Time code will become invalid |
 
-> [!Note]
+> [!NOTE]
 > Both `start_time` and `end_time` are required when creating time-based codes.
 
 #### Modify Access Code
@@ -98,11 +98,14 @@ The sensor attributes will contain two `json` keyed lists:
 | Parameter | Required | Description/Notes |
 |-----------|----------|-------------------|
 | `config_entry_id` | **required** | ID of the config entry of the Seam API where the managed access code exists |
-| `access_code_id` | **required** | The ID assigned to the access code by Seam.  This can be found in the [sensor attributes](TODO) for the lock
+| `access_code_id` | **required** | The ID assigned to the access code by Seam.  This can be found in the [sensor attributes](#attributes) for the lock
 | `code` | **requided** | Numeric access code 4 to 8 digits |
 | `name` | **required** | Name of code (user's name) |
 | `start_time` | optional | Date/Time code becomes valid (local time zone) |
 | `stop_time` | optional |  Date/Time code will become invalid |
+
+> [!NOTE]
+> Both `start_time` and `end_time` are required when creating time-based codes.
 
 #### Delete Access Code
 
