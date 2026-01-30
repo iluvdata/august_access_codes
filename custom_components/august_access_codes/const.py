@@ -32,6 +32,8 @@ ERROR_AUGUST_ACCOUNT_MISSING = "august_account_missing"
 ERROR_ACCOUNT_NOT_CONNECTED = "account_not_connected"
 ERROR_AUGUST_INTEGRATION_MISSING = "august_integration_missing"
 
+REPO_CONF_URL = "https://github.com/iluvdata/august_access_codes?tab=readme-ov-file#configuration"
+
 STEP_USER_DATA_SCHEMA = vol.Schema({vol.Required(CONF_API_KEY): TextSelector()})
 
 

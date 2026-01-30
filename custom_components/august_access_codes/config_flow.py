@@ -24,6 +24,7 @@ from .const import (
     DOMAIN,
     ERROR_AUGUST_INTEGRATION_MISSING,
     ERROR_INVALID_API_KEY,
+    REPO_CONF_URL,
     SEAM_URL,
 )
 
@@ -83,7 +84,7 @@ class AugustAccessConfigFlow(ConfigFlow, domain=DOMAIN):
             step_id="user",
             data_schema=STEP_USER_DATA_SCHEMA,
             errors=errors,
-            description_placeholders={"url": SEAM_URL},
+            description_placeholders={"url": SEAM_URL, "repo_conf_url": REPO_CONF_URL},
         )
 
     async def async_step_reauth(self, entry_data: dict[str, str]) -> ConfigFlowResult:
