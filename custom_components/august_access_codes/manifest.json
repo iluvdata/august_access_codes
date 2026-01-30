@@ -9,5 +9,5 @@
   "iot_class": "cloud_push",
   "issue_tracker": "https://github.com/iluvdata/august_access_codes/issues",
   "requirements": ["seam==1.139.0"],
-  "version": "2025.1.0"
+  "version": "2026.1.2"
 }
