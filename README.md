@@ -1,4 +1,4 @@
-# August Access:  Program Lock Codesa
+# August Access:  Program Lock Codes
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg?style=flat-square&logo=homeassistantcommunitystore)](https://hacs.xyz/)
 ![GitHub Release](https://img.shields.io/github/v/release/iluvdata/august_access_codes)
@@ -89,7 +89,7 @@ The sensor attributes will contain two `json` keyed lists:
 | `stop_time` | optional |  Date/Time code will become invalid |
 
 > [!NOTE]
-> Both `start_time` and `end_time` are required when creating time-based codes.
+> Both `start_time` and `stop_time` are required when creating time-based codes.
 
 #### Modify Access Code
 
@@ -105,7 +105,7 @@ The sensor attributes will contain two `json` keyed lists:
 | `stop_time` | optional |  Date/Time code will become invalid |
 
 > [!NOTE]
-> Both `start_time` and `end_time` are required when creating time-based codes.
+> Both `start_time` and `stop_time` are required when creating time-based codes.
 
 #### Delete Access Code
 
