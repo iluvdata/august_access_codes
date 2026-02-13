@@ -71,7 +71,7 @@ class SeamAPI:
     entry_update_listener_unload: CALLBACK_TYPE
 
     @classmethod
-    async def auth(cls, *, hass: HomeAssistant, entry: ConfigEntry) -> "SeamAPI":
+    async def auth(cls, *, hass: HomeAssistant, entry: ConfigEntry) -> SeamAPI:
         """Authenticate and return an AugustAccess instance."""
         if not hass.config_entries.async_has_entries(
             AUGUST_DOMAIN, include_ignore=False, include_disabled=False
@@ -88,6 +88,7 @@ class SeamAPI:
         await self._async_refresh_devices()
         # create webhook locally first
         webhook_id = f"{DOMAIN}_{self._entry.unique_id}"
+        async_unregister(hass, webhook_id)
         async_register(
             self._hass,
             DOMAIN,
