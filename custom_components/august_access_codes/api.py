@@ -71,7 +71,7 @@ class SeamAPI:
     entry_update_listener_unload: CALLBACK_TYPE
 
     @classmethod
-    async def auth(cls, *, hass: HomeAssistant, entry: ConfigEntry) -> SeamAPI:
+    async def auth(cls, *, hass: HomeAssistant, entry: ConfigEntry) -> "SeamAPI":  # noqa: UP037
         """Authenticate and return an AugustAccess instance."""
         if not hass.config_entries.async_has_entries(
             AUGUST_DOMAIN, include_ignore=False, include_disabled=False
