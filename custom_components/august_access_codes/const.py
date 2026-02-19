@@ -7,6 +7,9 @@ from typing import Any
 import voluptuous as vol
 
 from homeassistant.components.august import DOMAIN as AUGUST_DOMAIN
+
+# pylint: disable-next=hass-component-root-import
+from homeassistant.components.yalexs_ble.const import DOMAIN as YALE_BLE_DOMAIN
 from homeassistant.const import (
     ATTR_CONFIG_ENTRY_ID,
     ATTR_DEVICE_ID,
@@ -32,7 +35,9 @@ ERROR_AUGUST_ACCOUNT_MISSING = "august_account_missing"
 ERROR_ACCOUNT_NOT_CONNECTED = "account_not_connected"
 ERROR_AUGUST_INTEGRATION_MISSING = "august_integration_missing"
 
-REPO_CONF_URL = "https://github.com/iluvdata/august_access_codes?tab=readme-ov-file#configuration"
+REPO_CONF_URL = (
+    "https://github.com/iluvdata/august_access_codes?tab=readme-ov-file#configuration"
+)
 
 STEP_USER_DATA_SCHEMA = vol.Schema({vol.Required(CONF_API_KEY): TextSelector()})
 
@@ -95,7 +100,9 @@ CREATE_SERVICE_SCHEMA = vol.Schema(
             vol.Optional(ATTR_ENTITY_ID): cv.ensure_list,
             vol.Optional(ATTR_DEVICE_ID): cv.ensure_list,
             vol.Required("name"): cv.string,
-            vol.Required("code"): vol.All(int, vol.Range(0, 99999999)),
+            vol.Required("code"): vol.Msg(
+                cv.matches_regex(r"^\d{4,8}$"), "should be 4 to 8 digits"
+            ),
             vol.Optional("start_time"): cv.datetime,
             vol.Optional("stop_time"): cv.datetime,
         },
@@ -252,4 +259,4 @@ class AugustEntityFeature(IntFlag):
     PROGRAM_CODES = 2
 
 
-__all__ = ["AUGUST_DOMAIN"]
+__all__ = ["AUGUST_DOMAIN", "YALE_BLE_DOMAIN"]

@@ -26,9 +26,8 @@ from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import AugustAccessConfigEntry
 from .api import EventHandler, SeamAPI
-from .const import ACCESS_CODE_STATUS, AUGUST_DOMAIN, EventType
+from .const import ACCESS_CODE_STATUS, AUGUST_DOMAIN, DOMAIN, YALE_BLE_DOMAIN, EventType
 from .models import AccessCode
-from .util import get_august_device_id
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -48,13 +47,25 @@ async def async_setup_entry(
     """Setup the sensors for the mapped entities."""
     api: SeamAPI = config_entry.runtime_data
     dev_reg: dr.DeviceRegistry = dr.async_get(hass)
-    for device_id in api.device_map:
-        if device := dev_reg.async_get_device(identifiers={(AUGUST_DOMAIN, device_id)}):
-            if api.get_seam_device(api.get_seam_device_id(device_id)):
-                async_add_entities(
-                    [AccessCodeSensor(hass, api, device)],
-                    update_before_add=True,
+    entities: list[AccessCodeSensor] = []
+    for seam_device in api.get_seam_devices:
+        device: DeviceEntry = dev_reg.async_get_device(
+            identifiers={(YALE_BLE_DOMAIN, seam_device.properties.serial_number)}
+        )
+        if device is None:
+            if not (
+                device := dev_reg.async_get_device(
+                    identifiers={
+                        (AUGUST_DOMAIN, seam_device.properties.august_metadata.lock_id)
+                    }
                 )
+            ):
+                continue
+
+        entities.append(AccessCodeSensor(hass, api, device, seam_device.device_id))
+
+    if entities:
+        async_add_entities(entities, True)
 
 
 class AccessCodeSensor(SensorEntity):
@@ -67,22 +78,18 @@ class AccessCodeSensor(SensorEntity):
         hass: HomeAssistant,
         api: SeamAPI,
         august_device: DeviceEntry,
+        seam_id: str,
     ) -> None:
         """Initialize the sensor."""
         super().__init__()
-        seam_id = api.get_seam_device_id(
-            august_device_id=get_august_device_id(august_device)
-        )
-        if seam_id is None:
-            raise HomeAssistantError(
-                f"Unable to find seam device id for august device_id {get_august_device_id(august_device)}"
-            )
         self._seam_id: str = seam_id
         self.should_poll = False
         self._api: SeamAPI = api
         self._attr_unique_id = f"august_access_{self._seam_id}"
         self._attr_icon = "mdi:numeric"
-        self._attr_device_info = {"identifiers": august_device.identifiers}
+        identifiers: set[tuple[str, str]] = august_device.identifiers.copy()
+        identifiers.add((DOMAIN, seam_id))
+        self._attr_device_info = {"identifiers": identifiers}
         self._attr_name = f"{august_device.name} Access Codes"
         self._attr_state_class = SensorStateClass.TOTAL
         self.entity_id = async_generate_entity_id(

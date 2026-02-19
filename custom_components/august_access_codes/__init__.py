@@ -34,7 +34,6 @@ from .const import (
     MODIFY_SERVICE_SCHEMA,
     AugustEntityFeature,
 )
-from .util import get_august_id
 
 type AugustAccessConfigEntry = ConfigEntry[SeamAPI]
 
@@ -92,12 +91,16 @@ async def async_setup(hass: HomeAssistant, config_type: ConfigType) -> bool:
                 raise ServiceValidationError("entity_id_missing")
         if not device_id:
             raise ServiceValidationError(translation_key="device_id_missing")
-        august_id = get_august_id(hass, device_id)
-        if not august_id:
-            raise ServiceValidationError(translation_key="device_not_found")
         august_access = _get_api(call)
-        if not (seam_id := august_access.get_seam_device_id(august_id)):
-            raise ServiceValidationError("seam_device_not_found")
+        device: dr.DeviceEntry | None = dr.async_get(hass).async_get(device_id)
+        if device is None:
+            raise ServiceValidationError(translation_key="hass_device_missing")
+        seam_id: str | None = None
+        for ids in device.identifiers:
+            if ids[0] == DOMAIN:
+                seam_id = ids[1]
+        if seam_id is None:
+            raise ServiceValidationError(translation_key="no_seam_device_id_found")
         # Replace with the correct method to create an access code, for example:
         access_code: AccessCode = await august_access.async_create_access_code(
             seam_id,

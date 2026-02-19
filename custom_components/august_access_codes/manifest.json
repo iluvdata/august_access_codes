@@ -7,7 +7,8 @@
   "config_flow": true,
   "dependencies": [
     "webhook",
-    "august"
+    "august",
+    "yalexs_ble"
   ],
   "documentation": "https://github.com/iluvdata/august_access_codes",
   "integration_type": "service",
@@ -16,5 +17,5 @@
   "requirements": [
     "seam>=1.139"
   ],
-  "version": "2026.2.13"
+  "version": "2026.2.2-b0"
 }
