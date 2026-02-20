@@ -196,7 +196,7 @@ async def async_unload_entry(
 ) -> bool:
     """Unload a config entry."""
     # Close api
-    await entry.runtime_data.values()[0].api.async_close()
+    await list(entry.runtime_data.values())[0].api.async_close()
     # Shutdown coordinators to remove listeners
     gather(
         *[coordinator.async_shutdown() for coordinator in entry.runtime_data.values()]
