@@ -24,5 +24,21 @@
       "invalid_api_key": "The provided Seam API key is invalid.",
       "no_august_locks": "No August locks were found in your Seam account."
     }
+  },
+  "entity": {
+    "binary_sensor": {
+      "progamming_status": {
+        "name": "Code Updating",
+        "state": {
+          "on": "Updating",
+          "off": "Set"
+        }
+      }
+    },
+    "sensor": {
+      "access_codes": {
+        "name": "Access Codes"
+      }
+    }
   }
 }

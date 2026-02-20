@@ -1,6 +1,8 @@
 """Constants for august_access integration."""
 
-from datetime import datetime
+from __future__ import annotations
+
+from datetime import datetime, timedelta
 from enum import IntFlag, StrEnum
 from typing import Any
 
@@ -18,6 +20,8 @@ from homeassistant.const import (
 )
 import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.selector import TextSelector
+
+SCAN_INTERVAL = timedelta(seconds=120)
 
 DOMAIN = "august_access_codes"
 
@@ -40,16 +44,6 @@ REPO_CONF_URL = (
 )
 
 STEP_USER_DATA_SCHEMA = vol.Schema({vol.Required(CONF_API_KEY): TextSelector()})
-
-
-class ACCESS_CODE_STATUS(StrEnum):
-    """Access Code Status Enum."""
-
-    SETTING = "setting"
-    SET = "set"
-    UNSET = "unset"
-    REMOVING = "removing"
-    UNKNOWN = "unknown"
 
 
 def _verify_datetimes(data: dict[str, Any]) -> dict[str, Any]:
@@ -173,47 +167,47 @@ class EventType(StrEnum):
         raise TypeError
 
     @classmethod
-    def ALL(cls) -> list["EventType"]:
+    def ALL(cls) -> list[EventType]:
         """Get all events."""
         return list(cls)
 
     @classmethod
-    def DEVICE_REMOVE_EVENTS(cls) -> set["EventType"]:
+    def DEVICE_REMOVE_EVENTS(cls) -> set[EventType]:
         """Device removal events."""
         return cls.DEVICE_DELETED | cls.DEVICE_REMOVED
 
     @classmethod
-    def DEVICE_AVAILIBILE_EVENTS(cls) -> set["EventType"]:
+    def DEVICE_AVAILIBILE_EVENTS(cls) -> set[EventType]:
         """Device available events."""
         return cls.DEVICE_CONNECTION | cls.DEVICE_CONNECTION_STABILIZED
 
     @classmethod
-    def DEVICE_NOT_AVAILIBILE_EVENTS(cls) -> set["EventType"]:
+    def DEVICE_NOT_AVAILIBILE_EVENTS(cls) -> set[EventType]:
         """Device not available events."""
         return cls.DEVICE_CONNECTION_FLAKY | cls.DEVICE_DISCONNECTED
 
     @classmethod
-    def DEVICE_AVAILIBILITY_EVENTS(cls) -> set["EventType"]:
+    def DEVICE_AVAILIBILITY_EVENTS(cls) -> set[EventType]:
         """All device availibility events."""
         return cls.DEVICE_AVAILIBILE_EVENTS() | cls.DEVICE_NOT_AVAILIBILE_EVENTS()
 
     @classmethod
-    def ACCESS_CODE_NEW_EVENT(cls) -> set["EventType"]:
+    def ACCESS_CODE_NEW_EVENT(cls) -> set[EventType]:
         """New access code."""
         return cls.ACCESS_CODE_CREATED | cls.ACCESS_CODE_UNMANAGED_CREATED
 
     @classmethod
-    def ACCESS_CODE_REMOVED_EVENT(cls) -> set["EventType"]:
+    def ACCESS_CODE_REMOVED_EVENT(cls) -> set[EventType]:
         """Access code removed."""
         return cls.ACCESS_CODE_DELETE | cls.ACCESS_CODE_DELETED_EXTERNAL_TO_SEAM
 
     @classmethod
-    def ACCESS_CODE_MODIFIED_EVENT(cls) -> set["EventType"]:
+    def ACCESS_CODE_MODIFIED_EVENT(cls) -> set[EventType]:
         """Access code modified."""
         return cls.ACCESS_CODE_CHANGED | cls.ACCESS_CODE_MODFIED_EXTERNAL_TO_SEAM
 
     @classmethod
-    def ACCESS_CODE_DEVICE_EVENT(cls) -> set["EventType"]:
+    def ACCESS_CODE_DEVICE_EVENT(cls) -> set[EventType]:
         """Access code on device events."""
         return (
             cls.ACCESS_CODE_SCHEDULED_ON_DEVICE
@@ -226,7 +220,7 @@ class EventType(StrEnum):
         )
 
     @classmethod
-    def ACCESS_CODE_MANAGED_EVENT(cls) -> set["EventType"]:
+    def ACCESS_CODE_MANAGED_EVENT(cls) -> set[EventType]:
         """Managed access code Events."""
         return (
             cls.ACCESS_CODE_CREATED
@@ -236,7 +230,7 @@ class EventType(StrEnum):
         )
 
     @classmethod
-    def ACCESS_CODE_UNMANAGED_EVENT(cls) -> set["EventType"]:
+    def ACCESS_CODE_UNMANAGED_EVENT(cls) -> set[EventType]:
         """Unmanaged access code events."""
         return (
             cls.ACCESS_CODE_UMANANAGED_CONVERTED_TO_MANAGED
@@ -246,7 +240,7 @@ class EventType(StrEnum):
         )
 
     @classmethod
-    def ACCESS_CODE_EVENT(cls) -> list["EventType"]:
+    def ACCESS_CODE_EVENT(cls) -> list[EventType]:
         """Get a list of all access code events."""
         access_codes_filter = filter(lambda x: x.startswith("acceess_code"), cls.ALL())
         return list(access_codes_filter)

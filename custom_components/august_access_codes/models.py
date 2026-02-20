@@ -3,18 +3,15 @@
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any
-from uuid import UUID
-
-from .const import ACCESS_CODE_STATUS
 
 
 @dataclass
 class AccessCode:
     """Seam Access Code."""
 
-    access_code_id: UUID
+    access_code_id: str
     user_name: str
-    status: ACCESS_CODE_STATUS
+    status: str
     access_code: str
     is_managed: bool = field(default=False)
     starts_at: datetime | None = field(default=None)

@@ -1,9 +1,9 @@
-"""August Access Lock Codes Sensor."""
+"""August Access Lock Codes Binary Sensor."""
 
 from collections.abc import Callable
 import logging
 
-from homeassistant.components.sensor import SensorEntity, SensorStateClass
+from homeassistant.components.binary_sensor import BinarySensorEntity
 from homeassistant.core import HomeAssistant
 import homeassistant.helpers.device_registry as dr
 from homeassistant.helpers.device_registry import DeviceEntry
@@ -24,7 +24,7 @@ async def async_setup_entry(
 ) -> None:
     """Setup the sensors for the mapped entities."""
     dev_reg: dr.DeviceRegistry = dr.async_get(hass)
-    entities: list[AccessCodeSensor] = []
+    entities: list[AccessCodeStatusSensor] = []
     for coordinator in config_entry.runtime_data.values():
         device: DeviceEntry = dev_reg.async_get_device(
             identifiers={(YALE_BLE_DOMAIN, coordinator.serial_number)}
@@ -41,20 +41,21 @@ async def async_setup_entry(
                 )
             ):
                 continue
-        entities.append(AccessCodeSensor(hass, coordinator, device))
+        entities.append(AccessCodeStatusSensor(coordinator, device))
 
     if entities:
         async_add_entities(entities)
 
 
-class AccessCodeSensor(CoordinatorEntity[AccessCodeCoordinator], SensorEntity):
-    """Representation of an August Access Lock Codes Sensor."""
+class AccessCodeStatusSensor(
+    CoordinatorEntity[AccessCodeCoordinator], BinarySensorEntity
+):
+    """Representation of an August Access Lock Codes Status Sensor."""
 
     _listener_handle_unload: Callable | None = None
 
     def __init__(
         self,
-        hass: HomeAssistant,
         coordinator: AccessCodeCoordinator,
         august_device: DeviceEntry,
     ) -> None:
@@ -63,19 +64,18 @@ class AccessCodeSensor(CoordinatorEntity[AccessCodeCoordinator], SensorEntity):
         self._attr_has_entity_name = True
         self.should_poll = False
         self._attr_unique_id = f"august_access_{self.coordinator.seam_id}"
-        self._attr_icon = "mdi:numeric"
+        self._attr_icon = "mdi:progress-check"
+        self._attr_translation_key = "progamming_status"
         identifiers: set[tuple[str, str]] = august_device.identifiers.copy()
         identifiers.add((DOMAIN, self.coordinator.seam_id))
         self._attr_device_info = {"identifiers": identifiers}
-        self._attr_translation_key = "access_codes"
-        self._attr_state_class = SensorStateClass.TOTAL
 
     @property
-    def native_value(self) -> int | None:  # noqa: D102
-        return len(self.coordinator.data.managed_access_codes) + len(
-            self.coordinator.data.unmanaged_access_codes
-        )
-
-    @property
-    def extra_state_attributes(self):  # noqa: D102
-        return self.coordinator.data.todict()
+    def is_on(self) -> bool | None:
+        """Return if a code is in a status other than set."""
+        for code in list(self.coordinator.data.managed_access_codes.values()) + list(
+            self.coordinator.data.unmanaged_access_codes.values()
+        ):
+            if code.status != "set":
+                return True
+        return False

@@ -1,12 +1,13 @@
 """Api for August Access integration."""
 
 from asyncio import gather
-from collections.abc import Awaitable, Callable, Iterable, Mapping
+from collections.abc import Awaitable, Callable, Iterable
 from dataclasses import dataclass
 from datetime import datetime
 from enum import StrEnum
 from functools import partial
 import logging
+from urllib.parse import urlparse
 
 from aiohttp.web_request import Request
 from aiohttp.web_response import Response
@@ -67,65 +68,6 @@ class MapType(StrEnum):
     SEAM_DEVICE = "device"
 
 
-class SeamDeviceMap:
-    """Map a Seam Device to August Device IDs or Serial Numbers."""
-
-    def __init__(self) -> None:
-        """Initialize the device map."""
-        self._devices: Mapping[SeamDeviceID, Mapping[MapType, SeamDevice]] = {}
-
-    def async_add(self, device: SeamDevice) -> None:
-        """Add a device to the map."""
-        self._devices[device.device_id] = {
-            MapType.AUGUST_DEVICE_ID: device.properties.august_metadata.lock_id,
-            MapType.AUGUST_SERIAL_NUM: device.properties.serial_number,
-            MapType.SEAM_DEVICE: device,
-        }
-
-    def async_add_all(
-        self, devices: Iterable[SeamDevice], clear_devices: bool = False
-    ) -> None:
-        """Add all devices to the map."""
-        if clear_devices:
-            self._devices = {}
-        for device in devices:
-            self.async_add(device)
-
-    def async_get(self, device_id: SeamDeviceID) -> SeamDevice | None:
-        """Get a device by Seam Device ID."""
-        if device_map := self._devices.get(device_id):
-            return device_map[MapType.SEAM_DEVICE]
-        return None
-
-    def async_get_all(self) -> Iterable[SeamDevice]:
-        """Return all devices."""
-        return [
-            device_map[MapType.SEAM_DEVICE] for device_map in self._devices.values()
-        ]
-
-    def async_get_by_id(self, id_value: str, id_type: MapType) -> SeamDevice | None:
-        """Get a device by august device id or serial number."""
-        if id_type not in {MapType.AUGUST_DEVICE_ID, MapType.AUGUST_SERIAL_NUM}:
-            return None
-        for device_map in self._devices.values():
-            if id_type in device_map and id_value == device_map[id_type]:
-                return device_map[MapType.SEAM_DEVICE]
-        return None
-
-    def async_remove(self, device_id: SeamDeviceID) -> None:
-        """Remove a device."""
-        del self._devices[device_id]
-
-    def async_remove_by_id(self, id_value: str, id_type: MapType) -> None:
-        """Remove a device by august device id or serial number."""
-        if id_type not in {MapType.AUGUST_DEVICE_ID, MapType.AUGUST_SERIAL_NUM}:
-            return
-        for device_id, device_map in self._devices:
-            if id_type in device_map and id_value == device_map[id_type]:
-                self.async_remove(device_id)
-                return
-
-
 class SeamAPI:
     """Handle all communication with the Seam service."""
 
@@ -134,7 +76,6 @@ class SeamAPI:
     _entry: ConfigEntry
     _webhook: Webhook
     _webhook_listeners: list[EventHandler] = []
-    _devices: SeamDeviceMap = SeamDeviceMap()
     entry_update_listener_unload: CALLBACK_TYPE
 
     @classmethod
@@ -154,7 +95,7 @@ class SeamAPI:
         self._seam = await hass.async_add_executor_job(
             Seam.from_api_key, self._entry.data[CONF_API_KEY]
         )
-        await self._async_refresh_devices()
+
         # create webhook locally first
         webhook_id = f"{DOMAIN}_{self._entry.unique_id}"
         async_unregister(hass, webhook_id)
@@ -166,35 +107,59 @@ class SeamAPI:
             self.get_webhook_handler(),
         )
         url: str = async_generate_url(hass, webhook_id)
-
-        # Create the webhook, but first check if there are any dangling hooks.
-        webhooks: list[Webhook] = await hass.async_add_executor_job(
-            self._seam.webhooks.list
-        )
-        if len(webhooks) > 0:
+        url_parsed = urlparse(url)
+        if url_parsed[0] != "https:":
             _LOGGER.warning(
-                "More than one Seam webhook exists. Removing dangling webhooks"
+                "Cannot use Seam webhooks without https connection, reverting to poll only. %s",
+                url,
             )
-            await gather(
-                *[
-                    self._hass.async_add_executor_job(
-                        partial(
-                            self._seam.webhooks.delete, webhook_id=webhook.webhook_id
-                        )
-                    )
-                    for webhook in webhooks
-                ]
+        else:
+            # Create the webhook, but first check if there are any dangling hooks.
+            webhooks: list[Webhook] = await hass.async_add_executor_job(
+                self._seam.webhooks.list
             )
+            webhook: Webhook | None = None
+            if len(webhooks) > 0:
+                _LOGGER.debug("Seam webooks already exist, grabbing the first one")
+                webhook = webhooks[0]
 
-        _LOGGER.debug("Creating seam webhook with url: %s", url)
-        self._webhook = await hass.async_add_executor_job(
-            partial(
-                self._seam.webhooks.create,
-                url=url,
-                event_types=[event.value for event in EventType],
-            ),
-        )
-        _LOGGER.debug("Created Seam webhook with id: %s", self._webhook.webhook_id)
+                if len(webhooks) > 1:
+                    _LOGGER.warning("More than one webhook exists, deleting the others")
+                    await gather(
+                        *[
+                            self._hass.async_add_executor_job(
+                                partial(
+                                    self._seam.webhooks.delete,
+                                    webhook_id=webhook.webhook_id,
+                                )
+                            )
+                            for webhook in webhooks[1:]
+                        ]
+                    )
+
+                if webhook.url != url:
+                    _LOGGER.warning("Webhook URL mismatch, recreating")
+                    await hass.async_add_executor_job(
+                        partial(self._seam.webhooks.delete, webhook_id=webhooks[0])
+                    )
+                    webhook = None
+                else:
+                    # Get the secret
+                    webhook = await hass.async_add_executor_job(
+                        partial(self._seam.webhooks.get, webhook_id=webhook.webhook_id)
+                    )
+            if webhook is None:
+                _LOGGER.debug("Creating seam webhook with url: %s", url)
+                self._webhook = await hass.async_add_executor_job(
+                    partial(
+                        self._seam.webhooks.create,
+                        url=url,
+                        event_types=[event.value for event in EventType],
+                    ),
+                )
+                _LOGGER.debug(
+                    "Created Seam webhook with id: %s", self._webhook.webhook_id
+                )
 
         return self
 
@@ -237,7 +202,13 @@ class SeamAPI:
                 allow_external_modification=True,
             )
         )
-        await self._async_notify_listeners(seam_device_id)
+        await self._async_notify_listeners(
+            _basic_seam_event(
+                access_code.access_code_id,
+                seam_device_id,
+                EventType.ACCESS_CODE_CREATED,
+            ),
+        )
         return access_code
 
     async def async_modify_access_code(
@@ -249,13 +220,12 @@ class SeamAPI:
         end_time: datetime | None,
     ) -> None:
         """Modify an access code."""
+        access_code: AccessCode = await self._raise_if_not_valid_code(access_code_id)
         if start_time:
             start_time = as_utc(start_time)
         if end_time:
             end_time = as_utc(end_time)
-        access_code: AccessCode = await self._hass.async_add_executor_job(
-            partial(self._seam.access_codes.get, access_code_id=access_code_id)
-        )
+
         await self._hass.async_add_executor_job(
             partial(
                 self._seam.access_codes.update,
@@ -266,41 +236,55 @@ class SeamAPI:
                 ends_at=str(end_time) if end_time else None,
             )
         )
-        await self._async_notify_listeners(access_code.device_id)
+        await self._async_notify_listeners(
+            _basic_seam_event(
+                access_code_id,
+                access_code.device_id,
+                EventType.ACCESS_CODE_CHANGED,
+            ),
+        )
 
-    async def _raise_if_not_valid_code(self, acccess_code_id: str) -> None:
+    async def _raise_if_not_valid_code(self, acccess_code_id: str) -> AccessCode:
         try:
             access_code: AccessCode = await self._hass.async_add_executor_job(
                 partial(self._seam.access_codes.get, access_code_id=acccess_code_id)
             )
             if not access_code.is_managed:
                 raise AugustAccessError("Unable to manipulate unmanaged codes")
+            return access_code  # noqa: TRY300
         except SeamHttpApiError as ex:
             raise AugustAccessError(str(ex)) from ex
 
     async def async_delete_access_code(self, access_code_id: str) -> None:
         """Delete an access code."""
-        await self._raise_if_not_valid_code(access_code_id)
-        access_code: AccessCode = await self._hass.async_add_executor_job(
-            partial(self._seam.access_codes.get, access_code_id=access_code_id)
-        )
+        access_code: AccessCode = await self._raise_if_not_valid_code(access_code_id)
         await self._hass.async_add_executor_job(
             partial(self._seam.access_codes.delete, access_code_id=access_code_id)
         )
-        await self._async_notify_listeners(access_code.device_id)
+        await self._async_notify_listeners(
+            _basic_seam_event(
+                access_code_id, access_code.device_id, EventType.ACCESS_CODE_DELETE
+            )
+        )
 
-    async def _async_notify_listeners(self, seam_device_id: SeamDeviceID) -> None:
+    async def _async_notify_listeners(self, event: SeamEvent) -> None:
         handlers = [
             handler.handler
             for handler in self._webhook_listeners
-            if handler.seam_device_id == seam_device_id
+            if handler.seam_device_id == event.device_id
         ]
-        await gather(*[handler(None) for handler in handlers])
+        await gather(*[handler(event) for handler in handlers])
 
     async def managed_access_codes(self, seam_device_id: str) -> list[AccessCode]:
         """Get managed codes from the device."""
         return await self._hass.async_add_executor_job(
             partial(self._seam.access_codes.list, device_id=seam_device_id)
+        )
+
+    async def get_managed_code(self, access_code_id: str) -> AccessCode:
+        """Get a single access code."""
+        return await self._hass.async_add_executor_job(
+            partial(self._seam.access_codes.get, access_code_id=access_code_id)
         )
 
     async def unmanaged_access_codes(
@@ -311,14 +295,24 @@ class SeamAPI:
             partial(self._seam.access_codes.unmanaged.list, device_id=seam_device_id)
         )
 
-    async def _async_refresh_devices(self) -> None:
-        devices: list[SeamDevice] = await self._hass.async_add_executor_job(
+    async def get_unmanaged_code(self, access_code_id: str) -> UnmanagedAccessCode:
+        """Get a single unmanaged access code."""
+        return await self._hass.async_add_executor_job(
             partial(
-                self._seam.devices.list,
-                device_type=AUGUST_LOCK_TYPE,
+                self._seam.access_codes.unmanaged.get, access_code_id=access_code_id
             )
         )
-        self._devices.async_add_all(devices, True)
+
+    async def async_get_devices(self) -> Iterable[SeamDevice]:
+        """Get Seam devices for the account."""
+        return iter(
+            await self._hass.async_add_executor_job(
+                partial(
+                    self._seam.devices.list,
+                    device_type=AUGUST_LOCK_TYPE,
+                )
+            )
+        )
 
     def get_seam_device_features(self, seam_device_id: str) -> set[AugustEntityFeature]:
         """Get the features for a device."""
@@ -343,11 +337,6 @@ class SeamAPI:
     def get_seam_device_by_serial_num(self, serial_num: str) -> SeamDevice | None:
         """Get a Seam device by august device id."""
         return self._devices.async_get_by_id(serial_num, MapType.AUGUST_SERIAL_NUM)
-
-    @property
-    def get_seam_devices(self) -> Iterable[SeamDevice]:
-        """Get iterator of devices."""
-        return self._devices.async_get_all()
 
     async def unload(self) -> bool:
         """Unload the August Access API."""
@@ -419,6 +408,18 @@ class SeamAPI:
             return Response(status=200)
 
         return handle_webhook
+
+
+def _basic_seam_event(
+    access_code_id: str, seam_device_id: str, event_type: EventType
+) -> SeamEvent:
+    return SeamEvent.from_dict(
+        {
+            "access_code_id": access_code_id,
+            "device_id": seam_device_id,
+            "event_type": event_type,
+        }
+    )
 
 
 class AugustAccessError(IntegrationError):

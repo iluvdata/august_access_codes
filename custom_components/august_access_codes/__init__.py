@@ -1,5 +1,7 @@
 """The August Access integration."""
 
+from asyncio import gather
+from collections.abc import Mapping
 from dataclasses import asdict
 import logging
 from typing import cast
@@ -26,7 +28,7 @@ import homeassistant.helpers.device_registry as dr
 import homeassistant.helpers.entity_registry as er
 from homeassistant.helpers.typing import ConfigType
 
-from .api import SeamAPI
+from .api import SeamAPI, SeamDeviceID
 from .const import (
     CREATE_SERVICE_SCHEMA,
     DELETE_SERVICE_SCHEMA,
@@ -34,8 +36,9 @@ from .const import (
     MODIFY_SERVICE_SCHEMA,
     AugustEntityFeature,
 )
+from .coordinator import AccessCodeCoordinator
 
-type AugustAccessConfigEntry = ConfigEntry[SeamAPI]
+type AugustAccessConfigEntry = ConfigEntry[Mapping[SeamDeviceID, AccessCodeCoordinator]]
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -75,7 +78,7 @@ async def async_setup(hass: HomeAssistant, config_type: ConfigType) -> bool:
             raise ServiceValidationError("entry_not_found")
         if entry.state is not ConfigEntryState.LOADED:
             raise ServiceValidationError("entry_not_loaded")
-        return cast(AugustAccessConfigEntry, entry).runtime_data
+        return list(cast(AugustAccessConfigEntry, entry).runtime_data.values())[0].api
 
     async def _create_access_code(call: ServiceCall) -> ServiceResponse:
         """Create access code service."""
@@ -168,9 +171,22 @@ async def async_setup_entry(
 
     seam_api: SeamAPI = await SeamAPI.auth(hass=hass, entry=entry)
 
-    entry.runtime_data = seam_api
+    coordinators: dict[SeamDeviceID, AccessCodeCoordinator] = {
+        seam_device.device_id: AccessCodeCoordinator(hass, seam_api, seam_device)
+        for seam_device in await seam_api.async_get_devices()
+    }
 
-    await hass.config_entries.async_forward_entry_setups(entry, [Platform.SENSOR])
+    await gather(
+        *[
+            coordinator.async_config_entry_first_refresh()
+            for coordinator in coordinators.values()
+        ]
+    )
+    entry.runtime_data = coordinators
+
+    await hass.config_entries.async_forward_entry_setups(
+        entry, [Platform.BINARY_SENSOR, Platform.SENSOR]
+    )
 
     return True
 
@@ -179,7 +195,13 @@ async def async_unload_entry(
     hass: HomeAssistant, entry: AugustAccessConfigEntry
 ) -> bool:
     """Unload a config entry."""
-    return await entry.runtime_data.unload()
+    # Close api
+    await entry.runtime_data.values()[0].api.async_close()
+    # Shutdown coordinators to remove listeners
+    gather(
+        *[coordinator.async_shutdown() for coordinator in entry.runtime_data.values()]
+    )
+    return True
 
 
 __all__ = ["AugustEntityFeature"]
