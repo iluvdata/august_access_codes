@@ -83,7 +83,7 @@ class SeamAPI:
         """Authenticate and return an AugustAccess instance."""
         if not hass.config_entries.async_has_entries(
             AUGUST_DOMAIN, include_ignore=False, include_disabled=False
-        ) or not hass.config_entries.async_has_entries(
+        ) and not hass.config_entries.async_has_entries(
             YALE_BLE_DOMAIN, include_ignore=False, include_disabled=False
         ):
             raise ConfigEntryError(

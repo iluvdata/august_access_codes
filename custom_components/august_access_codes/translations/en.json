@@ -40,5 +40,10 @@
         "name": "Access Codes"
       }
     }
+  },
+  "exceptions": {
+    "august_account_missing": {
+      "message": "The August or Yale Access Bluetooth integrations must be configured"
+    }
   }
 }
