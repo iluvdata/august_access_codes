@@ -108,7 +108,7 @@ class SeamAPI:
         )
         url: str = async_generate_url(hass, webhook_id)
         url_parsed = urlparse(url)
-        if url_parsed[0] != "https:":
+        if url_parsed[0] != "https":
             _LOGGER.warning(
                 "Cannot use Seam webhooks without https connection, reverting to poll only. %s",
                 url,
