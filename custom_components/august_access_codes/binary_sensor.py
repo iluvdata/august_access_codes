@@ -73,9 +73,7 @@ class AccessCodeStatusSensor(
     @property
     def is_on(self) -> bool | None:
         """Return if a code is in a status other than set."""
-        for code in list(self.coordinator.data.managed_access_codes.values()) + list(
-            self.coordinator.data.unmanaged_access_codes.values()
-        ):
+        for code in list(self.coordinator.data.managed_access_codes.values()):
             if code.status != "set":
                 return True
         return False

@@ -14,7 +14,7 @@ Seam (currently) allows users to associate a few accounts/devices for free.  Thi
 
 ## Requirements
 
-A secure and publically available Home Assistant either by your own means or via Home Assistant Cloud (Nabu Casa) as this integration requires "Cloud Push" update leveraging webhooks.
+A secure and publicly available Home Assistant either by your own means or via Home Assistant Cloud (Nabu Casa) as this integration requires "Cloud Push" update leveraging webhooks.
 
 ## Installation
 
@@ -72,7 +72,7 @@ The sensor attributes will contain two `json` keyed lists:
 * `unmanaged_access_codes` - similar to the `managed_access_codes` but these cannot be modified by Seam or this integration (see Warning below).
 
 >[!Warning] 
-> This integration does not support manipulating "unmanaged" access codes (i.e. codes set directly on the device or using the native app).  Seam claims exposes endpoints to manipulate these codes or to convert unmanaged these to managed codes. However, each time these endpoints were tested the device would disassociate with the Yale/Augsut account and not longer be accesible 
+> This integration does not support manipulating "unmanaged" access codes (i.e. codes set directly on the device or using the native app).  Seam claims exposes endpoints to manipulate these codes or to convert unmanaged these to managed codes. However, each time these endpoints were tested the device would disassociate with the Yale/August account and not longer be accessible 
 
 ### Services
 
@@ -83,7 +83,7 @@ The sensor attributes will contain two `json` keyed lists:
 | Parameter | Required | Description/Notes |
 |-----------|----------|-------------------|
 | `target` | **required** | Entity or Device of target lock |
-| `code` | **requided** | Numeric access code 4 to 8 digits |
+| `code` | **required** | Numeric access code 4 to 8 digits |
 | `name` | **required** | Name of code (user's name) |
 | `start_time` | optional | Date/Time code becomes valid (local time zone) |
 | `stop_time` | optional |  Date/Time code will become invalid |
@@ -99,7 +99,7 @@ The sensor attributes will contain two `json` keyed lists:
 |-----------|----------|-------------------|
 | `config_entry_id` | **required** | ID of the config entry of the Seam API where the managed access code exists |
 | `access_code_id` | **required** | The ID assigned to the access code by Seam.  This can be found in the [sensor attributes](#attributes) for the lock
-| `code` | **requided** | Numeric access code 4 to 8 digits |
+| `code` | **required** | Numeric access code 4 to 8 digits |
 | `name` | **required** | Name of code (user's name) |
 | `start_time` | optional | Date/Time code becomes valid (local time zone) |
 | `stop_time` | optional |  Date/Time code will become invalid |
