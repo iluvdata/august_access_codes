@@ -5,17 +5,17 @@ from dataclasses import dataclass
 from datetime import datetime
 import logging
 
+from urllib3.exceptions import ProtocolError
+
 from seam.exceptions import SeamHttpApiError
-from seam.routes.models import (
-    AccessCode as SeamAccessCode,
-    Device as SeamDevice,
-    SeamEvent,
-    UnmanagedAccessCode,
-)
+from seam.routes.access_codes import AccessCode as SeamAccessCode
+from seam.routes.access_codes_unmanaged import UnmanagedAccessCode
+from seam.routes.devices import Device as SeamDevice
+from seam.routes.events import SeamEvent
 
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .api import EventHandler, SeamAPI
 from .const import SCAN_INTERVAL, EventType
@@ -56,8 +56,8 @@ class AccessCodeCoordinator(DataUpdateCoordinator[AccessCodeData]):
         )
         self.api: SeamAPI = api
         self.seam_id = seam_device.device_id
-        self.serial_number = seam_device.properties.serial_number
-        self.august_lock_id = seam_device.properties.august_metadata.lock_id
+        self.serial_number: str = seam_device.properties["serial_number"]
+        self.august_lock_id: str = seam_device.properties["august_metadata"]["lock_id"]
 
     async def _async_setup(self) -> None:
         event_handler: EventHandler = EventHandler(
@@ -72,12 +72,14 @@ class AccessCodeCoordinator(DataUpdateCoordinator[AccessCodeData]):
         await super().async_shutdown()
 
     async def _async_update_data(self) -> AccessCodeData:
-        managed_ac: list[SeamAccessCode] = await self.api.managed_access_codes(
-            self.seam_id
-        )
-        unmanaged_ac: list[UnmanagedAccessCode] = await self.api.unmanaged_access_codes(
-            self.seam_id
-        )
+        managed_ac: list[SeamAccessCode] = []
+        unmanaged_ac: list[UnmanagedAccessCode] = []
+        try:
+            managed_ac = await self.api.managed_access_codes(self.seam_id)
+            unmanaged_ac = await self.api.unmanaged_access_codes(self.seam_id)
+        except (TimeoutError, ProtocolError) as ex:
+            _LOGGER.warning("Error updated access codes from seam: %s", str(ex))
+            raise UpdateFailed from ex
         return AccessCodeData(
             _map_access_codes(managed_ac), _map_access_codes(unmanaged_ac)
         )

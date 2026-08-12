@@ -1,17 +1,11 @@
 """Constants for august_access integration."""
 
-from __future__ import annotations
-
-from datetime import datetime, timedelta
+from datetime import timedelta
 from enum import IntFlag, StrEnum
 from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.components.august import DOMAIN as AUGUST_DOMAIN
-
-# pylint: disable-next=hass-component-root-import
-from homeassistant.components.yalexs_ble.const import DOMAIN as YALE_BLE_DOMAIN
 from homeassistant.const import (
     ATTR_CONFIG_ENTRY_ID,
     ATTR_DEVICE_ID,
@@ -20,6 +14,7 @@ from homeassistant.const import (
 )
 import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.selector import TextSelector
+from homeassistant.util import dt as dt_util
 
 SCAN_INTERVAL = timedelta(seconds=120)
 
@@ -52,7 +47,7 @@ def _verify_datetimes(data: dict[str, Any]) -> dict[str, Any]:
     if (start is not None and end is None) or (end is not None and start is None):
         raise vol.Invalid("If specifying times both entries are required.")
     if start is not None:
-        if data["stop_time"] < datetime.now():
+        if data["stop_time"] < dt_util.now():
             raise vol.Invalid("End time must be in the future.")
         if data["start_time"] > data["stop_time"]:
             raise vol.Invalid("Start time must be before end time.")
@@ -251,6 +246,3 @@ class AugustEntityFeature(IntFlag):
 
     ACCESS_CODES = 1
     PROGRAM_CODES = 2
-
-
-__all__ = ["AUGUST_DOMAIN", "YALE_BLE_DOMAIN"]

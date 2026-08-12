@@ -1,20 +1,15 @@
 """August Access Lock Codes Binary Sensor."""
 
 from collections.abc import Callable
-import logging
 
 from homeassistant.components.binary_sensor import BinarySensorEntity
 from homeassistant.core import HomeAssistant
-import homeassistant.helpers.device_registry as dr
-from homeassistant.helpers.device_registry import DeviceEntry
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from . import AugustAccessConfigEntry
-from .const import AUGUST_DOMAIN, DOMAIN, YALE_BLE_DOMAIN
 from .coordinator import AccessCodeCoordinator
-
-_LOGGER = logging.getLogger(__name__)
+from .util import get_device_entry
 
 
 async def async_setup_entry(
@@ -23,28 +18,13 @@ async def async_setup_entry(
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Setup the sensors for the mapped entities."""
-    dev_reg: dr.DeviceRegistry = dr.async_get(hass)
-    entities: list[AccessCodeStatusSensor] = []
-    for coordinator in config_entry.runtime_data.values():
-        device: DeviceEntry = dev_reg.async_get_device(
-            identifiers={(YALE_BLE_DOMAIN, coordinator.serial_number)}
-        )
-        if device is None:
-            if not (
-                device := dev_reg.async_get_device(
-                    identifiers={
-                        (
-                            AUGUST_DOMAIN,
-                            coordinator.august_lock_id,
-                        )
-                    }
-                )
-            ):
-                continue
-        entities.append(AccessCodeStatusSensor(coordinator, device))
 
-    if entities:
-        async_add_entities(entities)
+    async_add_entities(
+        [
+            AccessCodeStatusSensor(hass, coordinator)
+            for coordinator in config_entry.runtime_data.values()
+        ]
+    )
 
 
 class AccessCodeStatusSensor(
@@ -56,8 +36,8 @@ class AccessCodeStatusSensor(
 
     def __init__(
         self,
+        hass: HomeAssistant,
         coordinator: AccessCodeCoordinator,
-        august_device: DeviceEntry,
     ) -> None:
         """Initialize the sensor."""
         super().__init__(coordinator=coordinator)
@@ -66,9 +46,9 @@ class AccessCodeStatusSensor(
         self._attr_unique_id = f"august_access_{self.coordinator.seam_id}"
         self._attr_icon = "mdi:progress-check"
         self._attr_translation_key = "progamming_status"
-        identifiers: set[tuple[str, str]] = august_device.identifiers.copy()
-        identifiers.add((DOMAIN, self.coordinator.seam_id))
-        self._attr_device_info = {"identifiers": identifiers}
+        self.device_entry = get_device_entry(
+            hass, coordinator.august_lock_id, coordinator.serial_number
+        )
 
     @property
     def is_on(self) -> bool | None:

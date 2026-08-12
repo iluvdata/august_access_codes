@@ -9,6 +9,8 @@ from seam.auth import SeamInvalidTokenError
 from seam.exceptions import SeamHttpUnauthorizedError
 import voluptuous as vol
 
+from homeassistant.components.august import DOMAIN as AUGUST_DOMAIN
+from homeassistant.components.yalexs_ble import DOMAIN as YALEXS_BLE_DOMAIN
 from homeassistant.config_entries import (
     SOURCE_REAUTH,
     SOURCE_USER,
@@ -20,7 +22,6 @@ from homeassistant.helpers.selector import TextSelector
 
 from . import AugustAccessConfigEntry
 from .const import (
-    AUGUST_DOMAIN,
     DOMAIN,
     ERROR_AUGUST_INTEGRATION_MISSING,
     ERROR_INVALID_API_KEY,
@@ -45,8 +46,9 @@ class AugustAccessConfigFlow(ConfigFlow, domain=DOMAIN):
     ) -> ConfigFlowResult:
         """Handle the initial step."""
         # check if the core august integration is loaded
-        entries: list = self.hass.config_entries.async_loaded_entries(AUGUST_DOMAIN)
-        if not entries:
+        if not self.hass.config_entries.async_loaded_entries(
+            AUGUST_DOMAIN
+        ) and not self.hass.config_entries.async_loaded_entries(YALEXS_BLE_DOMAIN):
             return self.async_abort(reason=ERROR_AUGUST_INTEGRATION_MISSING)
 
         errors: dict[str, str] = {}

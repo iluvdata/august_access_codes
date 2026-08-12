@@ -13,21 +13,21 @@ from aiohttp.web_request import Request
 from aiohttp.web_response import Response
 from seam import Seam, SeamWebhook
 from seam.exceptions import SeamHttpApiError, SeamHttpUnauthorizedError
-from seam.routes.models import (
-    AccessCode,
-    ConnectedAccount,
-    Device as SeamDevice,
-    SeamEvent,
-    UnmanagedAccessCode,
-    Webhook,
-)
+from seam.resources.webhook import Webhook
+from seam.routes.access_codes import AccessCode
+from seam.routes.access_codes_unmanaged import UnmanagedAccessCode
+from seam.routes.connected_accounts import ConnectedAccount
+from seam.routes.devices import Device as SeamDevice
+from seam.routes.events import SeamEvent
 from svix import WebhookVerificationError
 
+from homeassistant.components.august import DOMAIN as AUGUST_DOMAIN
 from homeassistant.components.webhook import (
     async_generate_url,
     async_register,
     async_unregister,
 )
+from homeassistant.components.yalexs_ble import DOMAIN as YALEXS_BLE_DOMAIN
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_API_KEY
 from homeassistant.core import CALLBACK_TYPE, HomeAssistant
@@ -35,12 +35,10 @@ from homeassistant.exceptions import ConfigEntryError, IntegrationError
 from homeassistant.util.dt import as_utc
 
 from .const import (
-    AUGUST_DOMAIN,
     AUGUST_LOCK_TYPE,
     AUGUST_PROVIDER,
     DOMAIN,
     ERROR_AUGUST_ACCOUNT_MISSING,
-    YALE_BLE_DOMAIN,
     AugustEntityFeature,
     EventType,
 )
@@ -84,7 +82,7 @@ class SeamAPI:
         if not hass.config_entries.async_has_entries(
             AUGUST_DOMAIN, include_ignore=False, include_disabled=False
         ) and not hass.config_entries.async_has_entries(
-            YALE_BLE_DOMAIN, include_ignore=False, include_disabled=False
+            YALEXS_BLE_DOMAIN, include_ignore=False, include_disabled=False
         ):
             raise ConfigEntryError(
                 translation_domain=DOMAIN, translation_key=ERROR_AUGUST_ACCOUNT_MISSING
@@ -148,6 +146,7 @@ class SeamAPI:
                     webhook = await hass.async_add_executor_job(
                         partial(self._seam.webhooks.get, webhook_id=webhook.webhook_id)
                     )
+                    self._webhook = webhook
             if webhook is None:
                 _LOGGER.debug("Creating seam webhook with url: %s", url)
                 self._webhook = await hass.async_add_executor_job(

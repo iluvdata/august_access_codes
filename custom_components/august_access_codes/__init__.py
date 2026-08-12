@@ -1,13 +1,13 @@
 """The August Access integration."""
 
-from asyncio import gather
+from asyncio import TaskGroup, gather
 from collections.abc import Mapping
 from dataclasses import asdict
 import logging
 from typing import cast
 
 from seam.exceptions import SeamHttpApiError
-from seam.routes.models import AccessCode
+from seam.routes.access_codes import AccessCode
 
 from homeassistant.config_entries import ConfigEntry, ConfigEntryState
 from homeassistant.const import (
@@ -176,12 +176,10 @@ async def async_setup_entry(
         for seam_device in await seam_api.async_get_devices()
     }
 
-    await gather(
-        *[
-            coordinator.async_config_entry_first_refresh()
-            for coordinator in coordinators.values()
-        ]
-    )
+    async with TaskGroup() as tg:
+        for coordinator in coordinators.values():
+            tg.create_task(coordinator.async_config_entry_first_refresh())
+
     entry.runtime_data = coordinators
 
     await hass.config_entries.async_forward_entry_setups(
@@ -195,12 +193,11 @@ async def async_unload_entry(
     hass: HomeAssistant, entry: AugustAccessConfigEntry
 ) -> bool:
     """Unload a config entry."""
-    # Close api
-    await list(entry.runtime_data.values())[0].api.async_close()
     # Shutdown coordinators to remove listeners
     gather(
         *[coordinator.async_shutdown() for coordinator in entry.runtime_data.values()]
     )
+    await list(entry.runtime_data.values())[0].api.unload()
     return True
 
 
